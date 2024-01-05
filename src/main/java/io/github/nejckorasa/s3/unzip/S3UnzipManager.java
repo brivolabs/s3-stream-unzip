@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import static java.lang.System.currentTimeMillis;
@@ -76,15 +77,15 @@ public class S3UnzipManager {
 
         String bucketName = s3Object.getBucketName();
 
-        try (var zipInputStream = new ZipInputStream(s3Object.getObjectContent())) {
-            var zipEntry = zipInputStream.getNextEntry();
+        try (ZipInputStream zipInputStream = new ZipInputStream(s3Object.getObjectContent())) {
+            ZipEntry zipEntry = zipInputStream.getNextEntry();
             while (zipEntry != null) {
                 if (zipEntry.isDirectory()) {
                     log.debug("Skipping directory {}", zipEntry.getName());
                     zipEntry = zipInputStream.getNextEntry();
                     continue;
                 }
-                var start = currentTimeMillis();
+                Long start = currentTimeMillis();
                 unzipStrategy.unzip(new S3ZipFile(bucketName, outputPrefix, zipInputStream, zipEntry), s3Client);
                 log.info("Unzipped {} in {} s", zipEntry.getName(), (currentTimeMillis() - start) / 1000);
                 zipEntry = zipInputStream.getNextEntry();
@@ -97,7 +98,7 @@ public class S3UnzipManager {
     }
 
     private List<S3ObjectSummary> findObjectSummaries(String bucket, String inputPrefix) {
-        var s3Objects = s3Client.listObjects(bucket, inputPrefix).getObjectSummaries();
+        List<S3ObjectSummary> s3Objects = s3Client.listObjects(bucket, inputPrefix).getObjectSummaries();
         log.debug("Found s3Objects: {}", s3Objects.stream().map(S3ObjectSummary::getKey).collect(joining(", ", "[", "]")));
         return s3Objects;
     }

@@ -62,7 +62,7 @@ public class S3MultipartUpload {
     }
 
     public S3MultipartUpload(String bucketName, String key, AmazonS3 s3Client, Config config) {
-        var threadPoolExecutor = new ThreadPoolExecutor(
+        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(
                 config.threadCount, config.threadCount,
                 0L, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<>(config.queueSize));
@@ -90,10 +90,10 @@ public class S3MultipartUpload {
     }
 
     public void initialize() {
-        var initRequest = new InitiateMultipartUploadRequest(bucketName, key);
+        InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, key);
         initRequest.setTagging(new ObjectTagging(new ArrayList<>()));
 
-        var metadata = new ObjectMetadata();
+        ObjectMetadata metadata = new ObjectMetadata();
         if (config.contentType != null) {
             metadata.setContentType(config.contentType);
         }
@@ -130,7 +130,7 @@ public class S3MultipartUpload {
     public void uploadFinalPart(ByteArrayInputStream inputStream) {
         try {
             submitUploadPart(inputStream, true);
-            var partETags = waitForAllUploadParts();
+            List<PartETag> partETags = waitForAllUploadParts();
             s3Client.completeMultipartUpload(new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags));
         } catch (Throwable t) {
             log.error("Failed to upload final part");
@@ -149,7 +149,7 @@ public class S3MultipartUpload {
             int partNumber = incrementUploadNumber();
             int partSize = inputStream.available();
 
-            var uploadPartRequest = new UploadPartRequest()
+            UploadPartRequest uploadPartRequest = new UploadPartRequest()
                     .withBucketName(bucketName)
                     .withKey(key)
                     .withUploadId(uploadId)
@@ -163,7 +163,7 @@ public class S3MultipartUpload {
 
             try {
                 log.debug("Submitting partNumber {}, with partSize {}", partNumber, partSize);
-                var uploadPartResult = s3Client.uploadPart(uploadPartRequest);
+                 UploadPartResult uploadPartResult = s3Client.uploadPart(uploadPartRequest);
                 log.debug("Submitted partNumber {}", partNumber);
                 return uploadPartResult.getPartETag();
             } catch (Throwable t) {
@@ -173,13 +173,13 @@ public class S3MultipartUpload {
     }
 
     private void submitTask(Callable<PartETag> task) {
-        var partETagFuture = executorService.submit(task);
+        Future<PartETag> partETagFuture = executorService.submit(task);
         partETagFutures.add(partETagFuture);
     }
 
     private List<PartETag> waitForAllUploadParts() throws InterruptedException, ExecutionException {
         List<PartETag> partETags = new ArrayList<>();
-        for (var partETagFuture : partETagFutures) {
+        for (Future<PartETag> partETagFuture : partETagFutures) {
             partETags.add(partETagFuture.get());
         }
         return partETags;
