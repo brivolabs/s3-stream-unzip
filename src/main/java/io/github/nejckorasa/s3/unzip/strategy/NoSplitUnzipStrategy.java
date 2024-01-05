@@ -54,7 +54,7 @@ public class NoSplitUnzipStrategy implements UnzipStrategy {
         long size = zipFile.size();
 
         String key = zipFile.key();
-        var s3MultipartUpload = new S3MultipartUpload(zipFile.getBucketName(), key, s3Client, config);
+        S3MultipartUpload s3MultipartUpload = new S3MultipartUpload(zipFile.getBucketName(), key, s3Client, config);
         s3MultipartUpload.initialize();
 
         log.info("Unzipping {}, compressed: {} bytes, extracted: {} bytes to {}", filename, compressedSize, size, key);
@@ -65,7 +65,7 @@ public class NoSplitUnzipStrategy implements UnzipStrategy {
             long partNumber = 0;
 
             byte[] data = new byte[uploadPartBytesLimit];
-            var outputStream = new ByteArrayOutputStream();
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
             while ((bytesRead = zipFile.getInputStream().read(data, 0, data.length)) != -1) {
                 outputStream.write(data, 0, bytesRead);
